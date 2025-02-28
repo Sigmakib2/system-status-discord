@@ -8,3 +8,12 @@ git clone https://github.com/Sigmakib2/system-status-discord.git
 cd system-status-discord
 chmod +x install.sh
 sudo ./install.sh
+```
+
+
+system-status-discord/
+├── install.sh                # Installation script
+├── system-status.sh          # Main script to send system status
+├── uninstall.sh              # Uninstall script
+├── system-status.service     # Systemd service file
+└── README.md                 # Documentation

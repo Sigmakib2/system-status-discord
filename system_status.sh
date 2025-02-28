@@ -2,27 +2,32 @@
 
 CONFIG_FILE="/etc/system_status.conf"
 
-# Load Webhook URL and Server Name
-source "$CONFIG_FILE"
+# Load config
+if [ -f "$CONFIG_FILE" ]; then
+    source "$CONFIG_FILE"
+else
+    echo "❌ Config file not found!"
+    exit 1
+fi
 
-# Get system information
-HOSTNAME=$(hostname)
+# Get system info
+HOSTNAME="$SERVER_NAME"
 UPTIME=$(uptime -p)
-CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4"%"}')
-CPU_TEMP=$(sensors | grep 'Package id 0:' | awk '{print $4}')
+CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4}')%
+CPU_TEMP=$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null | awk '{print $1/1000}')°C
 MEMORY_USAGE=$(free -h | awk '/Mem:/ {print $3 "/" $2}')
 DISK_USAGE=$(df -h / | awk 'NR==2 {print $3 "/" $2 " (" $5 ")"}')
-LOAD_AVERAGE=$(uptime | awk -F'load average:' '{ print $2 }')
+LOAD_AVG=$(cat /proc/loadavg | awk '{print $1, $2, $3}')
 
 # Format message
-MESSAGE="🖥 **$SERVER_NAME Status**\n\n"
-MESSAGE+="🔹 **Hostname:** $HOSTNAME\n"
-MESSAGE+="🕒 **Uptime:** $UPTIME\n"
+MESSAGE="🖥 $HOSTNAME Status\n\n"
+MESSAGE+="🔹 **Uptime:** $UPTIME\n"
 MESSAGE+="💻 **CPU Usage:** $CPU_USAGE\n"
-MESSAGE+="🔥 **CPU Temp:** $CPU_TEMP\n"
+[ -n "$CPU_TEMP" ] && MESSAGE+="🔥 **CPU Temp:** $CPU_TEMP\n"
 MESSAGE+="🧠 **Memory Usage:** $MEMORY_USAGE\n"
 MESSAGE+="💾 **Disk Usage:** $DISK_USAGE\n"
-MESSAGE+="📊 **Load Average:** $LOAD_AVERAGE"
+MESSAGE+="📊 **Load Average:** $LOAD_AVG"
 
 # Send to Discord
-curl -H "Content-Type: application/json" -X POST -d "{\"content\": \"$MESSAGE\"}" "$WEBHOOK_URL"
+PAYLOAD=$(jq -n --arg msg "$MESSAGE" '{content: $msg}')
+curl -H "Content-Type: application/json" -d "$PAYLOAD" "$WEBHOOK_URL"
