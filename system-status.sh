@@ -19,15 +19,31 @@ MEMORY_USAGE=$(free -h | awk '/Mem:/ {print $3 "/" $2}')
 DISK_USAGE=$(df -h / | awk 'NR==2 {print $3 "/" $2 " (" $5 ")"}')
 LOAD_AVG=$(cat /proc/loadavg | awk '{print $1, $2, $3}')
 
-# Format message
-MESSAGE="🖥 $HOSTNAME Status\n\n"
-MESSAGE+="🔹 **Uptime:** $UPTIME\n"
-MESSAGE+="💻 **CPU Usage:** $CPU_USAGE\n"
-[ -n "$CPU_TEMP" ] && MESSAGE+="🔥 **CPU Temp:** $CPU_TEMP\n"
-MESSAGE+="🧠 **Memory Usage:** $MEMORY_USAGE\n"
-MESSAGE+="💾 **Disk Usage:** $DISK_USAGE\n"
-MESSAGE+="📊 **Load Average:** $LOAD_AVG"
+# Discord Embed JSON Payload
+EMBED=$(cat <<EOF
+{
+  "username": "Server Monitor",
+  "avatar_url": "https://i.imgur.com/j2yF8aN.png",
+  "embeds": [{
+    "title": "🖥 $HOSTNAME - System Status",
+    "color": 5814783,
+    "fields": [
+      { "name": "🕒 Uptime", "value": "$UPTIME", "inline": true },
+      { "name": "💻 CPU Usage", "value": "$CPU_USAGE", "inline": true },
+      { "name": "🔥 CPU Temp", "value": "$CPU_TEMP", "inline": true },
+      { "name": "🧠 Memory Usage", "value": "$MEMORY_USAGE", "inline": true },
+      { "name": "💾 Disk Usage", "value": "$DISK_USAGE", "inline": true },
+      { "name": "📊 Load Average", "value": "$LOAD_AVG", "inline": true }
+    ],
+    "footer": {
+      "text": "Last updated",
+      "icon_url": "https://i.imgur.com/j2yF8aN.png"
+    },
+    "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  }]
+}
+EOF
+)
 
 # Send to Discord
-PAYLOAD=$(jq -n --arg msg "$MESSAGE" '{content: $msg}')
-curl -H "Content-Type: application/json" -d "$PAYLOAD" "$WEBHOOK_URL"
+curl -H "Content-Type: application/json" -d "$EMBED" "$WEBHOOK_URL"
