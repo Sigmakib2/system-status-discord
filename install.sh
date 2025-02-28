@@ -20,7 +20,7 @@ while true; do
     read -p "Enter your choice (1/2/3): " UNIT_CHOICE
     case "$UNIT_CHOICE" in
         1) TIME_UNIT="s"; UNIT_LABEL="seconds"; break;;
-        2) TIME_UNIT="min"; UNIT_LABEL="minutes"; break;;
+        2) TIME_UNIT="m"; UNIT_LABEL="minutes"; break;;
         3) TIME_UNIT="h"; UNIT_LABEL="hours"; break;;
         *) echo "❌ Invalid choice! Please enter 1, 2, or 3.";;
     esac
@@ -29,7 +29,7 @@ done
 # Ask for numeric interval value
 while true; do
     read -p "⏳ How many $UNIT_LABEL between each system status update? " INTERVAL
-    if [[ "$INTERVAL" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+    if [[ "$INTERVAL" =~ ^[0-9]+$ ]]; then
         break
     else
         echo "❌ Invalid input! Please enter a valid number."
@@ -39,12 +39,10 @@ done
 # Ask for Webhook URL
 read -p "🔗 Enter your Discord Webhook URL: " WEBHOOK_URL
 
-# Compute timer interval string for systemd timer (e.g., "30s", "5min", "1h")
-TIMER_INTERVAL="${INTERVAL}${TIME_UNIT}"
-
 # Save configuration
 echo "SERVER_NAME=\"$SERVER_NAME\"" | sudo tee "$CONFIG_FILE" > /dev/null
-echo "TIMER_INTERVAL=\"$TIMER_INTERVAL\"" | sudo tee -a "$CONFIG_FILE" > /dev/null
+echo "INTERVAL=\"$INTERVAL\"" | sudo tee -a "$CONFIG_FILE" > /dev/null
+echo "TIME_UNIT=\"$TIME_UNIT\"" | sudo tee -a "$CONFIG_FILE" > /dev/null
 echo "WEBHOOK_URL=\"$WEBHOOK_URL\"" | sudo tee -a "$CONFIG_FILE" > /dev/null
 
 echo "✅ Configuration saved at $CONFIG_FILE"
@@ -53,14 +51,14 @@ echo "✅ Configuration saved at $CONFIG_FILE"
 sudo cp system-status.sh "$INSTALL_PATH"
 sudo chmod +x "$INSTALL_PATH"
 
-# Create systemd service file for the status script
+# Create systemd service file
 sudo tee "$SERVICE_FILE" > /dev/null <<EOL
 [Unit]
 Description=System Status Monitor Service
 After=network.target
 
 [Service]
-ExecStart=$INSTALL_PATH
+ExecStart=/usr/bin/bash -c 'while true; do $INSTALL_PATH; sleep $INTERVAL$TIME_UNIT; done'
 Restart=always
 User=root
 
@@ -68,8 +66,10 @@ User=root
 WantedBy=multi-user.target
 EOL
 
-# Create systemd timer file using the computed interval
-sudo tee "$TIMER_FILE" > /dev/null <<EOL
+# If interval is 1 minute or more, use systemd timer
+if [[ "$TIME_UNIT" == "m" || "$TIME_UNIT" == "h" ]]; then
+    TIMER_INTERVAL="${INTERVAL}${TIME_UNIT}"
+    sudo tee "$TIMER_FILE" > /dev/null <<EOL
 [Unit]
 Description=Timer for System Status Monitor
 
@@ -82,10 +82,13 @@ Persistent=true
 WantedBy=timers.target
 EOL
 
-# Reload systemd and enable/start the timer
-sudo systemctl daemon-reload
-sudo systemctl enable system-status.timer
-sudo systemctl start system-status.timer
+    sudo systemctl enable system-status.timer
+    sudo systemctl start system-status.timer
+else
+    # Enable the looping service for second-based intervals
+    sudo systemctl enable system-status.service
+    sudo systemctl start system-status.service
+fi
 
 # Create uninstall script
 sudo cp uninstall.sh "$UNINSTALL_SCRIPT"
