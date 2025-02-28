@@ -2,25 +2,28 @@
 
 INSTALL_PATH="/usr/local/bin/system-status"
 CONFIG_FILE="/etc/system_status.conf"
-CRON_FILE="/etc/cron.d/system-status-cron"
 SERVICE_FILE="/etc/systemd/system/system-status.service"
+TIMER_FILE="/etc/systemd/system/system-status.timer"
 UNINSTALL_SCRIPT="/usr/local/bin/system-status-uninstall"
 
 echo "🗑️ Uninstalling System Status Monitor..."
 
-# Stop and disable systemd service
+# Stop and disable systemd timer and service
+if [ -f "$TIMER_FILE" ]; then
+    sudo systemctl stop system-status.timer
+    sudo systemctl disable system-status.timer
+    sudo rm -f "$TIMER_FILE"
+fi
+
 if [ -f "$SERVICE_FILE" ]; then
     sudo systemctl stop system-status.service
     sudo systemctl disable system-status.service
     sudo rm -f "$SERVICE_FILE"
-    sudo systemctl daemon-reload
 fi
 
-# Remove cron job
-sudo rm -f "$CRON_FILE"
-sudo systemctl restart cron
+sudo systemctl daemon-reload
 
-# Remove script & config
+# Remove installed files and config
 sudo rm -f "$INSTALL_PATH"
 sudo rm -f "$CONFIG_FILE"
 sudo rm -f "$UNINSTALL_SCRIPT"

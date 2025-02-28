@@ -2,7 +2,7 @@
 
 CONFIG_FILE="/etc/system_status.conf"
 
-# Load config
+# Load configuration
 if [ -f "$CONFIG_FILE" ]; then
     source "$CONFIG_FILE"
 else
@@ -10,7 +10,7 @@ else
     exit 1
 fi
 
-# Get system info
+# Get system information
 HOSTNAME="$SERVER_NAME"
 UPTIME=$(uptime -p)
 CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4}')%
@@ -19,7 +19,7 @@ MEMORY_USAGE=$(free -h | awk '/Mem:/ {print $3 "/" $2}')
 DISK_USAGE=$(df -h / | awk 'NR==2 {print $3 "/" $2 " (" $5 ")"}')
 LOAD_AVG=$(cat /proc/loadavg | awk '{print $1, $2, $3}')
 
-# Discord Embed JSON Payload
+# Create a rich Discord embed JSON payload
 EMBED=$(cat <<EOF
 {
   "username": "Server Monitor",
@@ -45,5 +45,5 @@ EMBED=$(cat <<EOF
 EOF
 )
 
-# Send to Discord
+# Send the embed to Discord
 curl -H "Content-Type: application/json" -d "$EMBED" "$WEBHOOK_URL"
