@@ -20,7 +20,7 @@ while true; do
     read -p "Enter your choice (1/2/3): " UNIT_CHOICE
     case "$UNIT_CHOICE" in
         1) TIME_UNIT="s"; UNIT_LABEL="seconds"; break;;
-        2) TIME_UNIT="m"; UNIT_LABEL="minutes"; break;;
+        2) TIME_UNIT="min"; UNIT_LABEL="minutes"; break;;
         3) TIME_UNIT="h"; UNIT_LABEL="hours"; break;;
         *) echo "❌ Invalid choice! Please enter 1, 2, or 3.";;
     esac
