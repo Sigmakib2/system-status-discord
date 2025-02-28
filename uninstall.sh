@@ -8,14 +8,14 @@ UNINSTALL_SCRIPT="/usr/local/bin/system-status-uninstall"
 
 echo "🗑️ Uninstalling System Status Monitor..."
 
-# Stop and disable systemd timer (if exists)
+# Stop and disable timer if it exists
 if [ -f "$TIMER_FILE" ]; then
     sudo systemctl stop system-status.timer
     sudo systemctl disable system-status.timer
     sudo rm -f "$TIMER_FILE"
 fi
 
-# Stop and disable the service
+# Stop and disable the service if it exists
 if [ -f "$SERVICE_FILE" ]; then
     sudo systemctl stop system-status.service
     sudo systemctl disable system-status.service

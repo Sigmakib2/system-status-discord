@@ -51,8 +51,8 @@ echo "✅ Configuration saved at $CONFIG_FILE"
 sudo cp system-status.sh "$INSTALL_PATH"
 sudo chmod +x "$INSTALL_PATH"
 
-# If seconds were selected, create a looping service.
 if [[ "$TIME_UNIT" == "s" ]]; then
+    # Looping service for seconds
     sudo tee "$SERVICE_FILE" > /dev/null <<EOL
 [Unit]
 Description=System Status Monitor Service (Looping for seconds)
@@ -62,6 +62,8 @@ After=network.target
 ExecStart=/bin/bash -c 'while true; do $INSTALL_PATH; sleep ${INTERVAL}${TIME_UNIT}; done'
 Restart=always
 User=root
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
@@ -71,7 +73,7 @@ EOL
     sudo systemctl enable system-status.service
     sudo systemctl start system-status.service
 else
-    # For minutes/hours, create a one-shot service and a timer.
+    # For minutes/hours, use a one-shot service with a timer.
     sudo tee "$SERVICE_FILE" > /dev/null <<EOL
 [Unit]
 Description=System Status Monitor Service (One-shot)
@@ -81,6 +83,8 @@ After=network.target
 Type=oneshot
 ExecStart=$INSTALL_PATH
 User=root
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
@@ -92,7 +96,7 @@ EOL
 Description=Timer for System Status Monitor
 
 [Timer]
-OnBootSec=$TIMER_INTERVAL
+OnBootSec=0
 OnUnitActiveSec=$TIMER_INTERVAL
 Persistent=true
 
