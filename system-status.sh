@@ -10,7 +10,7 @@ else
     exit 1
 fi
 
-# Get system information
+# Gather system information
 HOSTNAME="$SERVER_NAME"
 UPTIME=$(uptime -p)
 CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4}')%

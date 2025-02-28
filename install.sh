@@ -51,14 +51,15 @@ echo "✅ Configuration saved at $CONFIG_FILE"
 sudo cp system-status.sh "$INSTALL_PATH"
 sudo chmod +x "$INSTALL_PATH"
 
-# Create systemd service file
-sudo tee "$SERVICE_FILE" > /dev/null <<EOL
+# If seconds were selected, create a looping service.
+if [[ "$TIME_UNIT" == "s" ]]; then
+    sudo tee "$SERVICE_FILE" > /dev/null <<EOL
 [Unit]
-Description=System Status Monitor Service
+Description=System Status Monitor Service (Looping for seconds)
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/bash -c 'while true; do $INSTALL_PATH; sleep $INTERVAL$TIME_UNIT; done'
+ExecStart=/bin/bash -c 'while true; do $INSTALL_PATH; sleep ${INTERVAL}${TIME_UNIT}; done'
 Restart=always
 User=root
 
@@ -66,8 +67,25 @@ User=root
 WantedBy=multi-user.target
 EOL
 
-# If interval is 1 minute or more, use systemd timer
-if [[ "$TIME_UNIT" == "m" || "$TIME_UNIT" == "h" ]]; then
+    sudo systemctl daemon-reload
+    sudo systemctl enable system-status.service
+    sudo systemctl start system-status.service
+else
+    # For minutes/hours, create a one-shot service and a timer.
+    sudo tee "$SERVICE_FILE" > /dev/null <<EOL
+[Unit]
+Description=System Status Monitor Service (One-shot)
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=$INSTALL_PATH
+User=root
+
+[Install]
+WantedBy=multi-user.target
+EOL
+
     TIMER_INTERVAL="${INTERVAL}${TIME_UNIT}"
     sudo tee "$TIMER_FILE" > /dev/null <<EOL
 [Unit]
@@ -82,12 +100,9 @@ Persistent=true
 WantedBy=timers.target
 EOL
 
+    sudo systemctl daemon-reload
     sudo systemctl enable system-status.timer
     sudo systemctl start system-status.timer
-else
-    # Enable the looping service for second-based intervals
-    sudo systemctl enable system-status.service
-    sudo systemctl start system-status.service
 fi
 
 # Create uninstall script
